@@ -1,0 +1,69 @@
+/**
+ * A Netflix theme for reveal.js presentations, similar
+ * to the default theme. The accent color is darkblue.
+ *
+ * This theme is Copyright (C) 2014 ShihChi Huang, https://github.com/huang47.
+ */
+
+
+// Default mixins and settings -----------------
+@import "../template/mixins";
+@import "../template/settings";
+// ---------------------------------------------
+
+@import "../../netflix-icon-font";
+
+$NETFLIX_RED: #E50914;
+
+@font-face {
+  font-family: 'NetflixIcons';
+  @include netflix-icon-font-data;
+  font-weight: normal;
+  font-style: normal;
+}
+
+@mixin netflix-icons-base {
+  font-family: "NetflixIcons";
+  font-style: normal;
+  font-weight: normal;
+  display: inline-block;
+  text-decoration: inherit;
+  font-variant: normal;
+  text-transform: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+@mixin icon-kids {
+  @include netflix-icons-base;
+  content: '\e691'; 
+  font-size: 16px;
+}
+
+[class^="icon-"]:before,
+[class*=" icon-"]:before,
+[class^="icon-"]:after,
+[class*=" icon-"]:after {
+  @include netflix-icons-base;
+}
+
+$netflix_logo_glyph:                   "\e5D0";
+$kids_logo_glyph:                      "\e691";
+
+.icon-netflix-logo:before {
+  /*logo forground (black)*/
+  content: $netflix_logo_glyph;
+  color: $NETFLIX_RED;
+}
+
+@mixin icon-prompt {
+    @include netflix-icons-base;
+    content: "\e658";
+    font-size: .8em;
+    padding-right: .5em;
+}
+
+.icon-prompt:before {
+    content: "\e706"; -webkit-transform: rotate(90deg);
+}
+
+@import "../template/theme";

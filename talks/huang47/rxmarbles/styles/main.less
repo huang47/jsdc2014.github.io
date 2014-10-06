@@ -1,0 +1,37 @@
+
+@import "colors";
+@import "dimens";
+@import "fonts";
+@import "mixins";
+@import "components/pageRow";
+@import "components/operatorsMenu";
+@import "components/sandbox";
+@import "components/diagram/diagram";
+@import "components/gh-fork-ribbon";
+
+body {
+  position: relative;
+  background: @color-almost-white;
+  font-family: @font-base;
+  color: @color-black;
+}
+
+a {
+  color: @color-blue;
+}
+
+.pageTitle {
+  font-family: @font-special;
+  color: @color-grey-dark;
+}
+
+.valueProposition {
+  color: @color-grey-dark;
+}
+
+.footer {
+  position: absolute;
+  bottom: 0;
+  right: @space-medium;
+  color: @color-grey-dark;
+}

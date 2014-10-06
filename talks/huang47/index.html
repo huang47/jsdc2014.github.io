@@ -1,0 +1,1113 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>RxJS for f2e</title>
+
+		<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
+		<meta name="author" content="huang47">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.min.css">
+		<link rel="stylesheet" href="css/theme/netflix.css" id="theme">
+		<link rel="stylesheet" href="css/custom.css">
+
+		<!-- For syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- If the query includes 'print-pdf', include the PDF print sheet -->
+		<script>
+			if( window.location.search.match( /print-pdf/gi ) ) {
+				var link = document.createElement( 'link' );
+				link.rel = 'stylesheet';
+				link.type = 'text/css';
+				link.href = 'css/print/pdf.css';
+				document.getElementsByTagName( 'head' )[0].appendChild( link );
+			}
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal">
+            <div class="slides">
+                <section>
+                    <h1>RxJS for f2e</h1>
+                </section>
+
+                <section>
+                    <h1>who</h1>
+                    <pre>
+                        <code class="javascript">
+                    {
+                        "name": "ShihChi Huang",
+                        "work": "mobile engineer @ Netflix",
+                        "meta": "huang47 @ github/npm/twitter"
+                    }
+                        </code>
+                    </pre>
+                </section>
+
+                <section>
+                <section>
+                    <h1>async is hard</h1>
+                </section>
+                <section>
+                    <h1>sync</h1>
+                    <pre>
+                        <code class="javascript">
+                    // value is immediately available
+                    function getValueSync(value) {
+                        return value + 1;
+                    }
+
+                    var newValue = getValueSync(3);
+                    // newValue: 4
+                        </code>
+                    </pre>
+                </section>
+
+                <section>
+                    <h1>async</h1>
+                    <pre>
+                        <code class="javascript">
+                    function getValue(value) {
+                        setTimeout(function () {
+                            // how to return result?
+                            var result = value + 1;
+                        }, 100);
+                    }
+
+                    var newValue = getValue(3);
+                    // newValue: undefined
+                        </code>
+                    </pre>
+                </section>
+
+                <section data-background-transition="slide">
+                    <h1>callback</h1>
+                    <pre>
+                        <code class="javascript">
+                    function getValue(value, callback) {
+                        setTimeout(function () {
+                            callback(value + 1);
+                        }, 100);
+                    }
+
+                    getValue(3, function callback(newValue) {
+                        // newValue: 4
+                    });
+                        </code>
+                    </pre>
+                </section>
+                </section>
+
+                <section>
+                    <section>
+                        <h1>what's actually hard?</h1>
+                    </section>
+                    <section
+                        data-transition="none"
+                        data-background-image="./images/async-is-hard.png"
+                        data-background-size="60%"
+                    >
+                    </section>
+                    <section data-transition="none">
+                        <h2>example</h2>
+                        <pre>
+                            <code class="javascript">
+                var searchbox = $('input[type="search"]');
+                // getInput
+                searchbox.addEventListener('input', function (e) {
+                    var query = e.target.value.trim();
+
+                    // getSearchResults
+                    xhr(encodeURIComponent(query), function (results) {
+
+                        // renderSearchResults
+                        results.forEach(renderSearchResult);
+                    });
+                });
+                            </code>
+                        </pre>
+                    </section>
+
+                    <section
+                        data-transition="none"
+                        data-background-image="./images/boss.jpg"
+                        data-background-size="30%"
+                        style="margin-top:8em"
+                    >
+                        <p>it's bad to fire http request</p><p>for every single value</p>
+                    </section>
+
+                    <section data-transition="none">
+                        <h2>throttle</h2>
+                        <div style="text-align:left; margin-left:6em">
+                            <div class="fragment"> -> getInput</div>
+                            <div class="fragment" style="color:#e50914"> -> <a href="./rxmarbles/#throttle">throttle</a> input (250ms)</div>
+                            <div class="fragment"> -> getSearchResults</div>
+                            <div class="fragment"> -> renderSearchResults</div>
+                        </div>
+                    </section>
+                    <section data-transition="none">
+                        <h2>code</h2>
+                <pre>
+                    <code class="javascript">
+            var throttleId;
+
+            searchbox.addEventListener('input', function (e) {
+                var query = e.target.value.trim();
+
+                if (throttleId) { clearTimeout(throttleId); }
+
+                throttleId = setTimeout(function () {
+                    xhr(encodeURIComponent(query), function (results) {
+                        results.forEach(renderSearchResult);
+                    });
+                }, 250);
+            });
+                    </code>
+                </pre>
+                    </section>
+
+                    <section
+                        data-transition="none"
+                        data-background-image="./images/boss.jpg"
+                        data-background-size="30%"
+                        style="margin-top:8em"
+                    >
+                        <p class="fragment">retry few times if request timeout</p>
+                    </section>
+
+                    <section data-transition="none">
+                        <h2>retry</h2>
+                        <div style="text-align:left; margin-left:6em">
+                            <div class="fragment"> -> getInput</div>
+                            <div class="fragment"> -> throttle input (250ms)</div>
+                            <div class="fragment"> -> getSearchResults</div>
+                            <div class="fragment" style="color:#e50914"> -> retry (2) times if failed</div>
+                            <div class="fragment"> -> renderSearchResults (if latest)</div>
+                        </div>
+                    </section>
+
+                    <section data-transition="none">
+                        <h2>code</h2>
+                <pre style="font-size:0.4em">
+                    <code class="javascript">
+                    var retryCount = 0, throttleId, timeoutId;
+                    searchbox.addEventListener('input', function (e) {
+                        var query = e.target.value.trim();
+                        function request(str) {
+                            xhr(encodeURIComponent(str), function (results) {
+                                retryCount = 0;
+                                clearTimeout(timeoutId);
+                                results.forEach(renderSearchResult);
+                            });
+                        }
+                        if (throttleId) { clearTimeout(throttleId); }
+                        throttleId = setTimeout(function () {
+                            timeoutId = setTimeout(function () {
+                                if (retryCount &lt; 2) {
+                                    retryCount += 1;
+                                    request(query);
+                                } else {
+                                    retryCount = 0; // attempt exhausted
+                                }
+                            }, 3000);
+                        }, 250);
+                    });
+                    </code>
+                </pre>
+                    </section>
+
+                    <section
+                        data-transition="none"
+                        data-background-image="./images/boss.jpg"
+                        data-background-size="30%"
+                        style="margin-top:8em"
+                    >
+                        <p class="fragment">can we....</p>
+                    </section>
+
+                    <section
+                        data-transition="none"
+                        data-background-image="./images/meme.jpg"
+                        data-background-size="60%"
+                    >
+                    </section>
+                </section>
+
+                <section>
+                    <section>
+                    <h1>promise?</h1>
+                    <p>
+                        is good for <i>single value</i>
+                    </p><p>
+                        however, in event-driven world
+                    </p><p>
+                        we need a better way to deal with <span class="fragment highlight-red">collections</span>
+                    </p>
+                    </section>
+                    <section>
+                        <div style="margin-left: 230px">
+                            <blockquote class="twitter-tweet" lang="en">
+                                <p>Using Promises for concurrency is like bringing a knife to a gunfight. Learn Rx. <a href="http://t.co/micEO2SEVb">http://t.co/micEO2SEVb</a></p>&mdash; Jafar Husain (@jhusain) <a href="https://twitter.com/jhusain/status/401186469554823168">November 15, 2013</a>
+                            </blockquote>
+                            <script async src="http://platform.twitter.com/widgets.js" charset="utf-8"></script>
+                        </div>
+                    </section>
+                </section>
+
+                <section>
+                    <section
+                        data-background-image="./images/jhusain.jpeg"
+                        data-background-size="60%"
+                        style="margin-top: 8em;"
+                    >
+                    </section>
+                    <section>
+                        <h2>what's the difference</h2>
+                        <h2>between an <span class="fragment highlight-red">Array</span></h2>
+                        <h2>and an <span class="fragment highlight-red">Event</span> ?</h2>
+                    </section>
+
+                    <section
+                        data-background="./images/wtf.jpeg"
+                        data-background-size="60%"
+                    >
+                    </section>
+
+                    <section
+                        data-background="-webkit-radial-gradient(center, circle cover, #888a8f 0%, #1c1e20 100%)"
+                    >
+                        <h1>Collections !</h1>
+                        <pre>
+                            <code class="javascript">
+                    // Array
+                    [ { x: 10 }, { x: 20 }, { x: 30 } ]
+
+                    // Event
+                    { pageX: 10, timeStamp: 238 },
+                    { pageX: 20, timeStamp: 375 },
+                    { pageX: 30, timeStamp: 577 },
+                    ...
+                            </code>
+                        </pre>
+                    </section>
+                </section>
+
+                <section
+                    data-transition="linear"
+                    data-background="#000"
+                    data-background-transition="slide"
+                >
+                    <section>
+                        <h1>before dive in</h1>
+                        <h2>Array warm up</h2>
+                    </section>
+
+                    <section data-transition="linear" data-background-transition="slide">
+                        <h1>forEach</h1>
+                        <pre class="big">
+                            <code class="javascript">
+                        [1, 2, 3].forEach(function (v) {
+                            console.log(v);
+                        });
+                            </code>
+                        </pre>
+                        <ul class="shell" style="padding-left:6em;">
+                            <li class="fragment">[1, 2, 3]</li>
+                        </ul>
+                    </section>
+
+                    <section data-transition="linear" data-background-transition="slide">
+                        <h1>map</h1>
+                        <pre class="big">
+                            <code class="javascript">
+                        [1, 2, 3].map(function (v) {
+                            return v + 1;
+                        });
+                            </code>
+                        </pre>
+                        <ul class="shell" style="padding-left:6em;">
+                            <li class="fragment">[2, 3, 4]</li>
+                        </ul>
+                    </section>
+
+                    <section data-transition="linear" data-background-transition="none">
+                        <h1>filter</h1>
+                        <pre class="big">
+                            <code class="javascript">
+                        [1, 2, 3].filter(function (v) {
+                            return v > 1;
+                        });
+                            </code>
+                        </pre>
+                        <ul class="shell" style="padding-left:6em;">
+                            <li class="fragment">[2, 3]</li>
+                        </ul>
+                    </section>
+
+                    <section data-transition="linear" data-background-transition="none">
+                        <h1>concatAll</h1>
+                        <pre>
+                            <code class="javascript">
+                        [
+                            [1],
+                            [2, 3],
+                            [],
+                            [4]
+                        ].concatAll();
+                            </code>
+                        </pre>
+                        <ul class="shell" style="padding-left:6em;">
+                            <li class="fragment">[1, 2, 3, 4]</li>
+                        </ul>
+                    </section>
+
+                    <section data-transition="linear" data-background-transition="none">
+                        <h1>concatAll</h1>
+                        <pre>
+                            <code class="javascript">
+                Array.prototype.concatAll = function () {
+                    return this.reduce(function (a, c) {
+                        return Array.prototype.concat.call(a, c);
+                    }, []);
+                };
+                            </code>
+                        </pre>
+                    </section>
+
+                    <section data-transition="linear" data-background-transition="none">
+                        <h3>recap - map/filter/concatAll</h3>
+                        <pre>
+                            <code class="javascript">
+                        [1, 2, 3].map(function (v) {
+                            return v + 1;
+                        });
+                        // [2, 3, 4]
+
+                        [1, 2, 3].filter(function (v) {
+                            return v > 1;
+                        });
+                        // [2, 3]
+
+                        [[1], [2, 3], [], [4]].concatAll();
+                        // [1, 2, 3, 4]
+                            </code>
+                        </pre>
+                    </section>
+
+                    <section
+                        data-background-image="./images/lolomo.png"
+                        data-background-size="60%"
+                    >
+                    </section>
+
+                    <section>
+                        <h2>json</h2>
+                        <pre>
+                            <code class="javascript">
+            { "videoLists": [
+                { "category": "Recommend",
+                  "videos": [
+                    { "title": "Clone Wars", "rating": 5 },
+                    { "title": "How I Met Your Mother", "rating": 4 },
+                    { "title": "Turbo", "rating": 5 },
+                    { "title": "Arrow", "rating": 5 }
+                ] },
+                { "category": "Social Feed",
+                  "videos": [
+                    { "title": "Bob's Burgers", "rating": 5 },
+                    { "title": "World War Z", "rating": 4 },
+                    { "title": "Futurama", "rating": 5 },
+                    { "title": "Supernature", "rating": 5 }
+                ] }
+            ] }
+                            </code>
+                        </pre>
+                    </section>
+
+                    <section data-state="getTopRatedVideos">
+                    <h2>getTopRatedVideos</h2>
+                    <pre>
+                        <code class="javascript">
+                function getTopRatedVideos(user) {
+                    return user.videoLists.
+                        map(function (videoList) {
+                            return videoList.videos.
+                                filter(function (video) {
+                                    return 5 === video.rating;
+                                });
+                        }).
+                        concatAll();
+                }
+                        </code>
+                    </pre>
+                    </section>
+
+                    <section data-transition="linear" data-background-transition="slide">
+                    <h2>output</h2>
+                    <pre>
+                        <code class="javascript">
+            [
+                { "title": "Clone Wars", "rating": 5 },
+                { "title": "Bob's Burgers", "rating": 5 },
+                { "title": "Futurama", "rating": 5 },
+                { "title": "Turbo", "rating": 5 },
+                { "title": "Arrow", "rating": 5 },
+                { "title": "Supernature", "rating": 5 }
+            ]
+
+                        </code>
+                    </pre>
+                    </section>
+                </section>
+
+                <section>
+                    <section>
+                        <h2>what if I told you</h2>
+                        <h2>we can create a drag event</h2>
+                        <h2>with nearly the <span style="color:#e50914">same code</span>?</h2>
+                    </section>
+
+                    <section
+                        data-transition="none"
+                    >
+                    <h2>getTopRatedVideos</h2>
+                    <pre>
+                        <code class="javascript">
+                function getTopRatedVideos(user) {
+                    return user.videoLists.
+                        map(function (videoList) {
+                            return videoList.videos.
+                                filter(function (video) {
+                                    return 5 === video.rating;
+                                });
+                        }).
+                        concatAll();
+                }
+                        </code>
+                    </pre>
+                    </section>
+
+                    <section
+                        data-transition="none"
+                    >
+                    <h2>getMouseDrags</h2>
+                    <pre>
+                        <code class="javascript">
+                function getMouseDrags(elem) {
+                    return elem.mouseDowns.
+                        map(function (mouseDown) {
+                            return elem.mouseMoves.
+                                takeUntil(
+                                    elem.mouseUps
+                                );
+                        }).
+                        concatAll();
+                }
+                        </code>
+                    </pre>
+                    </section>
+                <section>
+                <h2>like.. <span class="fragment">SQL</span></h2>
+                    <div class="fragment">
+                    <pre>
+                        <code class="javascript">
+                    select video
+                    from user.videos
+                    where video.rating = 5
+                        </code>
+                    </pre>
+                    <pre>
+                        <code class="javascript">
+                    select *
+                    from mousedown, mousemove, mouseup
+                    where type != 'mouseup'
+                        </code>
+                    </pre>
+                    </div>
+                </section>
+                </section>
+
+                <section>
+                <section
+                    data-background-image="./images/RxJS.png"
+                    data-background-size="20%"
+                >
+                    <div class="fragment">
+                        <h1>Observable</h1>
+                        <h2>Collection + Time</h2>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Event</h2>
+                    <pre>
+                        <code class="javascript">
+                    var mouseMoves = Rx.Observable.
+                        fromEvent(document.body, 'mousemove');
+
+                    // addEventListener
+                    var subscription = mouseMoves.
+                        forEach(function (mouseMove) {
+                            // handle mouse move
+                        });
+
+                    // removeEventListener
+                    subscription.dispose();
+                        </code>
+                    </pre>
+                </section>
+
+                <section data-transition="none">
+                    <h2>Event</h2>
+                    <pre>
+                        <code class="javascript">
+                    mouseMoves.
+                        forEach(
+                            function onNext(mouseMove) {
+                                // handle mouse move
+                            },
+                            function onError(ex) {      // optional
+                                // handle error
+                            },
+                            function onCompleted() {    // optional
+                                // event completed
+                            }
+                        );
+                        </code>
+                    </pre>
+                </section>
+
+                <section>
+                    <h2>Observable can be</h2>
+                    <ul>
+                        <li class="fragment">event</li>
+                        <li class="fragment">xhr, async I/O</li>
+                        <li class="fragment">promise</li>
+                        <li class="fragment">node-stream</li>
+                        <li class="fragment">enumerable (Array)</li>
+                        <li class="fragment">generator</li>
+                    </ul>
+                </section>
+
+                </section>
+
+                <section>
+                    <section data-transition="linear" data-background-transition="slide">
+                    <h2>Observable literal</h2>
+                    <pre>
+                        <code class="javascript">
+                    Time --------------->
+                    {1......2............3}
+                        </code>
+                    </pre>
+
+                    <div style="text-align:left; margin-left:6em; font-size: 0.8em;">
+                        <h3 class="fragment" style="font-family:monaco;">{ ---> observable begin</h3>
+                        <h3 class="fragment" style="font-family:monaco;">} ---> observable end</h3>
+                        <h3 class="fragment" style="font-family:monaco;">... -> time</h3>
+                    </div>
+                    </section>
+
+                    <section data-transition="linear" data-background-transition="slide">
+                    <h2>forEach</h2>
+                    <pre>
+                        <code class="javascript">
+                    Time --------------->
+                    {1......2............3}.forEach(console.log);
+                        </code>
+                    </pre>
+                    
+                    <ul class="shell">
+                        <li>
+                            <span class="fragment">{1</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">2</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">3}</span>
+                        </li>
+                    </ul>
+                    </section>
+
+                    <section data-transition="linear" data-background-transition="slide">
+                    <h2>map</h2>
+                    <pre>
+                        <code class="javascript">
+                    Time --------------->
+                    {1......2............3}.map(function (x) {
+                        return x + 1;
+                    });
+                        </code>
+                    </pre>
+
+                    <ul class="shell">
+                        <li>
+                            <span class="fragment">{2</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">3</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">4}</span>
+                        </li>
+                    </ul>
+                    </section>
+
+                    <section data-transition="linear" data-background-transition="slide">
+                    <h2>filter</h2>
+                    <pre>
+                        <code class="javascript">
+                    Time --------------->
+                    {1......2............3}.filter(function (x) {
+                        return x > 1;
+                    });
+                        </code>
+                    </pre>
+                    
+                    <ul class="shell">
+                        <li>
+                            <span class="fragment">{...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">2</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">3}</span>
+                        </li>
+                    </ul>
+                    </section>
+
+                    <section data-transition="linear" data-background-transition="slide">
+                    <h2>distinctUntilChanged</h2>
+                    <pre>
+                        <code class="javascript">
+                    Time --------------->
+                    {1......2...2......3}.distinctUntilChanged()
+                        </code>
+                    </pre>
+                    
+                    <ul class="shell">
+                        <li>
+                            <span class="fragment">{1...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">2</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">3}</span>
+                        </li>
+                    </ul>
+                    </section>
+
+                    <section data-transition="linear" data-background-transition="slide">
+                    <h2>concatAll</h2>
+                    <pre>
+                        <code class="javascript">
+                    Time --------------->
+                    {
+                    ...{1},
+                    .........{2...............3},
+                    ...............{},
+                    ..................{4}
+                    }.concatAll();
+
+                    {...1.....2...............3...4}
+                        </code>
+                    </pre>
+
+                    <ul class="shell">
+                        <li>
+                            <span class="fragment">{...</span>
+                            <span class="fragment">1</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">2</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">3</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">4}</span>
+                        </li>
+                    </ul>
+                    </section>
+
+                    <section data-transition="linear" data-background-transition="slide">
+                    <h2>mergeAll</h2>
+                    <pre>
+                        <code class="javascript">
+                    Time --------------->
+                    {
+                    ...{1},
+                    .........{2...............3},
+                    ...............{},
+                    ..................{4}
+                    }.concatAll();
+
+                    {...1.....2........4......3}
+                        </code>
+                    </pre>
+
+                    <ul class="shell">
+                        <li>
+                            <span class="fragment">{...</span>
+                            <span class="fragment">1</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">2</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">4</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">3}</span>
+                        </li>
+                    </ul>
+                    </section>
+
+                    <section data-transition="linear" data-background-transition="slide">
+                    <h2>switchLatest</h2>
+                    <pre>
+                        <code class="javascript">
+                    Time --------------->
+                    {
+                    ...{1},
+                    .........{2...............3},
+                    ...............{},
+                    ..................{4}
+                    }.concatAll();
+
+                    {...1.....2........4}
+                        </code>
+                    </pre>
+
+                    <ul class="shell">
+                        <li>
+                            <span class="fragment">{...</span>
+                            <span class="fragment">1</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">2</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">4}</span>
+                        </li>
+                    </ul>
+                    </section>
+
+                    <section data-transition="linear" data-background-transition="slide">
+                    <h2>takeUntil</h2>
+                    <pre>
+                        <code class="javascript">
+                    Time --------------->
+                    {...1...2............3}.takeUntil(
+                    {...............4})
+
+                    {...1.....2.....}
+                        </code>
+                    </pre>
+
+                    <ul class="shell">
+                        <li>
+                            <span class="fragment">{...</span>
+                            <span class="fragment">1</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">2</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">...</span>
+                            <span class="fragment">}</span>
+                        </li>
+                    </ul>
+                    </section>
+                </section>
+
+                <section>
+                    <section>
+                    <h2>search</h2>
+                    <pre>
+                        <code class="javascript">
+                var searchbox = $('input[type="search"]');
+
+                searchbox.addEventListener('input', function (e) {
+                    var query = e.target.value.trim();
+
+                    // fire request
+                    xhr(encodeURIComponent(query), function (results) {
+
+                        // render search results
+                        results.forEach(renderSearchResult);
+                    });
+                });
+                        </code>
+                    </pre>
+                    </section>
+
+                <section>
+                    <h2>Rxify</h2>
+                    <pre>
+                        <code class="javascript">
+                var searchbox = $('input[type="search"]');
+
+                var inputs = Rx.Observable.fromEvent(searchbox, 'input');
+                
+                inputs.
+                    map(function (e) {
+                        // get input string
+                        var query = e.target.value.trim();
+                        // construct url
+                        var url = '/search?' + encodeURIComponent(query);
+                        // fire request
+                        return Rx.DOM.Request.getJSON(url).
+                            takeUntil(inputs);
+                    }).
+                    concatAll();
+                        </code>
+                    </pre>
+                </section>
+
+                <section data-transition="none">
+                    <h2>response</h2>
+                    <pre>
+                        <code class="javascript">
+                    Time --------------->
+                    {
+                    ...{s(h)},
+                    ......{s(he)},
+                    .........{s(hel)},
+                    ............{s(hell)}
+                    ...............{s(hello)}
+                    }
+                        </code>
+                    </pre>
+                </section>
+
+                <section
+                    data-transition="none"
+                    data-background-image="./images/too young too simple.jpg"
+                    data-background-size="30%"
+                    style="margin-top:8em"
+                >
+                    <h2>too young too simple</h2>
+                </section>
+
+                <section data-transition="none">
+                    <h2>real world</h2>
+                    <pre>
+                        <code class="javascript">
+                    Time --------------->
+                    {
+                    ...{s(h)},
+                    ......{s(he)},
+                    .........{s(hel)},
+                    ........................{s(hell)},
+                    ............{s(hello)}
+                    }
+                        </code>
+                    </pre>
+                </section>
+
+                <section data-transition="none">
+                    <h2>Rxify</h2>
+                    <pre>
+                        <code class="javascript">
+                var searchbox = $('input[type="search"]');
+
+                var inputs = Rx.Observable.fromEvent(searchbox, 'input');
+                
+                inputs.
+                    map(function (e) {
+                        // get input string
+                        var key = e.target.value.trim();
+                        // construct url
+                        var url = '/search?' + encodeURIComponent(key);
+                        // fire request
+                        return Rx.DOM.Request.getJSON(url).
+                            takeUntil(inputs);
+                    }).
+                    concatAll();
+                        </code>
+                    </pre>
+                </section>
+
+                <section data-transition="none">
+                    <h2><a href="./rxmarbles/#search">switchLatest</a></h2>
+                    <pre>
+                        <code class="javascript">
+                var searchbox = $('input[type="search"]');
+
+                var inputs = Rx.Observable.fromEvent(searchbox, 'input');
+
+                inputs.
+                    map(function (e) {
+                        // get input string
+                        var key = e.target.value.trim();
+                        // construct url
+                        var url = '/search?' + encodeURIComponent(key);
+                        // fire request
+                        return Rx.DOM.Request.getJSON(url);
+
+                    }).
+                    switchLatest();
+                        </code>
+                    </pre>
+                </section>
+
+                <section data-transition="none">
+                    <h2>even more</h2>
+                    <pre>
+                        <code class="javascript">
+                Rx.Observable.fromEvent(searchbox, 'input');
+                    throttle(250).
+                    map(function (e) {
+                        return e.target.value.trim();
+                    }).
+                    // drop if value doesn't change
+                    distinctUntilChanged().
+                    map(function (query) {
+                        var url = '/search?' + encodeURIComponent(key);
+                        // fire request
+                        return Rx.DOM.Request.getJSON(url).
+                            retry(3);
+                    }).
+                    switchLatest();
+                        </code>
+                    </pre>
+                </section>
+                </section>
+
+                <section>
+                    <h2>recap</h2>
+                    <ul>
+                        <li class="fragment">everything is Observable</li>
+                        <li class="fragment">use rich composition</li>
+                    </ul>
+                </section>
+
+                <section
+                    data-background="-webkit-radial-gradient(center, circle cover, #f00 0%, #e50914 100%)"
+                    data-background-transition="slide"
+                >
+                    <h1>questions?</h1>
+                </section>
+
+                <section>
+                    <h1>references</h1>
+                    <ul>
+                        <li><a href="http://www.infoq.com/presentations/netflix-rx-extensions">
+                            End to End Reactive Programming at Netflix
+                        </a></li>
+                    </ul>
+                </section>
+            </div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.min.js"></script>
+
+		<script>
+
+			// Full list of configuration options available here:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+				transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+				// Parallax scrolling
+				// parallaxBackgroundImage: 'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg',
+				// parallaxBackgroundSize: '2100px 900px',
+
+				// Optional libraries used to extend on reveal.js
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                    { src: 'plugin/highlight/highlight.js', async: true, callback: function() {
+                        hljs.initHighlightingOnLoad();
+                    }},
+					{ src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+					{ src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+				]
+			});
+
+    Reveal.addEventListener('getTopRatedVideos', function() {
+        var concat = Array.prototype.concat;
+
+        function concatAll() {
+            return this.reduce(function (a, c) {
+                return concat.call(a, c);
+            }, []);
+        }
+
+        Array.prototype.concatAll = concatAll;
+
+        var data = { "user":
+            { "videoLists": [
+                { "category": "Recommend",
+                  "videos": [
+                    { "title": "Clone Wars", "rating": 5 },
+                    { "title": "How I Met Your Mother", "rating": 4 },
+                    { "title": "Turbo", "rating": 5 },
+                    { "title": "Arrow", "rating": 5 }
+                ] },
+                { "category": "Social Feed",
+                  "videos": [
+                    { "title": "Bob's Burgers", "rating": 5 },
+                    { "title": "World War Z", "rating": 4 },
+                    { "title": "Futurama", "rating": 5 },
+                    { "title": "Supernature", "rating": 5 }
+                ] }
+            ] }
+        }
+
+        function getTopRatedVideos(user) {
+            return user.videoLists.
+                map(function (videoList) {
+                    return videoList.videos.
+                        filter(function (video) {
+                            return 5 === video.rating;
+                        });
+                }).
+                concatAll();
+        }
+
+        getTopRatedVideos(data.user).
+            forEach(function (video) {
+                console.log('title %s rating %s', video.title, video.rating);
+            });
+    });
+
+		</script>
+
+	</body>
+</html>

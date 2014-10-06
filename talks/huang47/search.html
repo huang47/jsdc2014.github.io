@@ -1,0 +1,64 @@
+<html>
+    <head>
+        <title>Rx Search</title>
+<style type="text/css">
+body { font-family: monaco; }
+
+input[type="search"] {
+    width: 80%;
+    margin: 0 auto;
+    font-size: 2em !important;
+    -webkit-appearance: textfield;
+    border-radius: 1em;
+}
+ul {
+    font-size: 1.5em;
+}
+li {
+    list-style-type: none;
+}
+</style>
+    </head>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/rxjs/2.3.11/rx.all.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/rxjs-dom/2.0.7/rx.dom.min.js"></script>
+    <body>
+
+        <div class="container">
+            <input type="search" name="search" value="" placeholder="type something..." autofocus="autofocus" />
+            <ul id="results"></ul>
+        </div>
+
+<script type="text/javascript">
+var d = document;
+var $ = d.querySelector.bind(d);
+var inputs = Rx.Observable.fromEvent($('input[type="search"]'), 'input');
+var results = $('#results');
+var delays = [200, 500, 1000, 200, 300];
+var i = 0;
+
+inputs.
+    map(function (e) {
+        return e.target.value.trim();
+    }).
+    throttle(250).
+    do(function (q) {
+        var el = d.createElement('li');
+        el.textContent = 'query ' + q;
+        results.insertBefore(el, results.firstChild);
+    }).
+    map(function (q) {
+        var delay = delays[i];
+        i = (++i) % 5;
+        return Rx.Observable.return(q + ' delay ' + delay + 's').
+            delay(delay);
+    }).
+    switchLatest().
+    subscribe(function (q) {
+        var el = d.createElement('li');
+        el.textContent = q;
+        results.insertBefore(el, results.firstChild);
+    });
+    
+</script>
+    </body>
+</html>
